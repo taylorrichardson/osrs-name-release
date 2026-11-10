@@ -266,3 +266,10 @@ td.name:has(.postb.taken) { color: var(--muted); text-decoration: line-through; 
 #batch .multi-menu, #slBatch .multi-menu { min-width: 250px; }
 #batch .multi-menu { left: auto; right: 0; }
 @media (max-width: 700px) { #batch .multi-menu { right: auto; } }
+
+/* released tab */
+.rel-help { display: none; margin: 10px 0 0; font-size: 13px; }
+.rel-mode .rel-help { display: block; }
+.out-taken { color: var(--error); font-weight: 600; }
+.out-freed { color: var(--gold); font-weight: 600; }
+@media (max-width: 700px) { .tabs button { padding: 10px 4px; font-size: 14px; } }

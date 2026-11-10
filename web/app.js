@@ -126,15 +126,14 @@ async function load() {
     $("#results").innerHTML = `<div class="empty">Couldn't load data.json. Start the app with <code>python nrp.py serve</code> and open the URL it prints.</div>`;
     return;
   }
-  $("#showReleased").checked = showReleased;
   applyReleased();
   setInterval(renderStats, 30_000);
 }
 
-// Released batches are hidden by default (their names are gone); a toggle brings them back.
+// Released batches live in their own tab ("Released"); the other views only show upcoming batches.
 let RAW = [];
 let SCANNED = 0;
-let showReleased = store.get("nrp.showReleased") === "1";
+var view = "all"; // all | released | shortlist
 // [key, menu label, short label for the summary] for every batch that has names in view
 function batchOptions() {
   const keys = [...new Set(ALL.map((r) => batchKey(r.n)))].sort((a, b) => a - b);
@@ -148,7 +147,8 @@ const inBatches = (hidden) => (r) => !hidden.has(batchKey(r.n));
 const checkedFromHidden = (hidden) => new Set(SCHEDULE.map((b) => String(b.n)).filter((k) => !hidden.has(k)));
 const hiddenFromChecked = (set) => new Set(SCHEDULE.map((b) => String(b.n)).filter((k) => !set.has(k)));
 function applyReleased() {
-  ALL = showReleased ? RAW : RAW.filter((r) => !batchInfo(batchKey(r.n)).released);
+  const rel = view === "released";
+  ALL = RAW.filter((r) => batchInfo(batchKey(r.n)).released === rel);
   const opts = batchOptions();
   syncBatch.setOptions(opts); syncBatch(checkedFromHidden(BATCH_HIDE));
   if (typeof syncSlBatches === "function") { syncSlBatches.setOptions(opts); syncSlBatches(checkedFromHidden(SL.hideBatches)); }
@@ -156,7 +156,7 @@ function applyReleased() {
   updateSeenBtn();
   shown = PAGE;
   render();
-  if (typeof view !== "undefined" && view === "shortlist") renderShortlist();
+  if (view === "shortlist") renderShortlist();
   if (typeof updateSlCount === "function") updateSlCount();
 }
 
@@ -273,6 +273,14 @@ function rowHtml(r, q) {
 }
 const THEAD = `<thead><tr><th></th><th>Name</th><th>Len</th><th>Value</th><th>Likelihood</th><th class="hide-sm">OSRS total</th><th class="hide-sm">RS3 total</th><th class="hide-sm">Signals</th><th class="hide-sm">Added</th></tr></thead>`;
 
+function outcomeCounts(k) {
+  const rows = ALL.filter((r) => batchKey(r.n) === k);
+  const n = (st) => rows.filter((r) => r.post === st).length;
+  const checked = rows.filter((r) => r.post).length;
+  if (!checked) return ` · <span class="muted">not re-checked yet</span>`;
+  return ` · <b class="out-taken">${n("claimed")} taken</b> · <b class="out-freed">${n("freed")} freed</b>`;
+}
+
 function render() {
   const { rows, hidden, q } = filtered();
   const page = rows.slice(0, shown);
@@ -288,7 +296,7 @@ function render() {
     for (const [k, list] of groups) {
       const b = batchInfo(k);
       html += `<section class="group${b.first ? " first" : ""}${b.released ? " released" : ""}"><h2>${batchBadge(b)}
-        ${b.title} <span class="when">${b.when}</span><span class="count">${totals.get(k).toLocaleString()} names</span></h2>
+        ${b.title} <span class="when">${b.when}</span><span class="count">${totals.get(k).toLocaleString()} names${b.released ? outcomeCounts(k) : ""}</span></h2>
         <table>${THEAD}<tbody>${list.map((r) => rowHtml(r, q)).join("")}</tbody></table></section>`;
     }
   } else {
@@ -558,29 +566,26 @@ $("#slPrint").addEventListener("click", () => {
   window.print();
 });
 
-// view switching (also remembered in the URL: #shortlist)
-let view = "all";
+// view switching (also remembered in the URL: #shortlist / #released)
 function setView(v) {
+  const changed = (view === "released") !== (v === "released");
   view = v;
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.view === v));
-  $("#allView").hidden = v !== "all";
+  $("#allView").hidden = v === "shortlist";
   $("#shortlistView").hidden = v !== "shortlist";
   document.body.classList.toggle("sl-mode", v === "shortlist");
-  history.replaceState(null, "", v === "shortlist" ? "#shortlist" : location.pathname);
-  if (v === "shortlist") renderShortlist(); else render();
+  document.body.classList.toggle("rel-mode", v === "released");
+  history.replaceState(null, "", v === "all" ? location.pathname : "#" + v);
+  if (changed) { BATCH_HIDE = new Set(); applyReleased(); }
+  else if (v === "shortlist") renderShortlist(); else render();
 }
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
 
 load().then(() => {
   updateSlCount();
-  if (location.hash === "#shortlist") setView("shortlist");
+  if (location.hash === "#shortlist" || location.hash === "#released") setView(location.hash.slice(1));
 });
 
-$("#showReleased").addEventListener("change", (e) => {
-  showReleased = e.target.checked;
-  store.set("nrp.showReleased", showReleased ? "1" : "0");
-  applyReleased();
-});
 
 // phones: filters fold away behind a button so the list gets the screen
 $("#filtersBtn").addEventListener("click", () => {
