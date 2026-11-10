@@ -497,7 +497,8 @@ def build_dataset(cache: dict[str, dict] | None = None):
     cache = cache if cache is not None else load_cache()
     allrows = [compact(rec) for rec in cache.values() if not is_offensive(rec["name"])]
     # only names with a real chance of releasing go to the web app (unlikely/active stay in the cache)
-    rows = [r for r in allrows if r["t"] in ("likely", "possible")]
+    # ...plus any name seen to be freed after release, whatever its pre-release score
+    rows = [r for r in allrows if r["t"] in ("likely", "possible") or r.get("post") == "freed"]
     # slim it down for phones: reason strings go in a shared table, empty fields are dropped
     texts: dict[str, int] = {}
     for r in rows:

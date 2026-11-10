@@ -250,7 +250,7 @@ function signals(r) {
 const POST = {
   claimed: ["taken", "TAKEN", "Re-checked after release: a different account is on the hiscores with this name now"],
   active: ["playing", "STILL PLAYING", "Re-checked after release: the same account gained XP since the scan, so the owner is active and the name won't release"],
-  freed: ["freed", "FREED", "Re-checked after release: the old account is gone from the hiscores, so the name was released (it may still be free)"],
+  freed: ["freed", "FREED", "Re-checked after release: the old account no longer uses this name. Either it was released, or the owner renamed (then the old name is held for them for about 35 days)"],
 };
 function postBadge(r) {
   const p = POST[r.post];
