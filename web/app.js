@@ -152,6 +152,9 @@ function applyReleased() {
   const opts = batchOptions();
   syncBatch.setOptions(opts); syncBatch(checkedFromHidden(BATCH_HIDE));
   if (typeof syncSlBatches === "function") { syncSlBatches.setOptions(opts); syncSlBatches(checkedFromHidden(SL.hideBatches)); }
+  const cnt = (st) => ALL.filter((r) => r.post === st).length;
+  $("#post option[value=claimed]").textContent = `Taken only (${cnt("claimed")})`;
+  $("#post option[value=freed]").textContent = `Freed only (${cnt("freed")})`;
   renderStats();
   updateSeenBtn();
   shown = PAGE;
@@ -214,7 +217,7 @@ function filtered() {
     if (!types.has(primaryType(r))) return false;
     if (!addedOk(r)) return false;
     if (post === "hide" ? r.post === "claimed" : post && r.post !== post) return false;
-    if (!tiers.has(r.t)) { hidden++; return false; }
+    if (!tiers.has(r.t) && !(post === "freed" && r.post === "freed")) { hidden++; return false; }
     return true;
   });
   const sort = $("#sort").value;
