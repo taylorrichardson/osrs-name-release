@@ -356,6 +356,10 @@ def load_cache() -> dict[str, dict]:
                     merged = {**prev, **rec}
                     # "added" = when this name was first looked up (never overwritten by re-checks)
                     merged["added"] = prev.get("added") or rec.get("fetched")
+                    # "freedSince" = first re-check that found the name gone (keeps the rename window tight)
+                    if "post" in rec:
+                        freed = (rec["post"] or {}).get("status") == "freed"
+                        merged["freedSince"] = (prev.get("freedSince") or rec["post"].get("checked")) if freed else None
                     cache[rec["name"]] = merged
                 except (json.JSONDecodeError, KeyError):
                     pass
@@ -490,6 +494,7 @@ def compact(rec: dict) -> dict:
         "added": rec.get("added") or rec.get("fetched"),
         "post": (rec.get("post") or {}).get("status"),
         "postAt": (rec.get("post") or {}).get("checked"),
+        "freedSince": rec.get("freedSince"),
     }
 
 

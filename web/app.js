@@ -255,9 +255,27 @@ const POST = {
   active: ["playing", "STILL PLAYING", "Re-checked after release: the same account gained XP since the scan, so the owner is active and the name won't release"],
   freed: ["freed", "FREED", "Re-checked after release: the old account no longer uses this name. Either it was released, or the owner renamed (then the old name is held for them for about 35 days)"],
 };
+// A renamed-away name is held for its old owner for ~35 days. The rename happened somewhere
+// between our last pre-release lookup (r.at) and the first re-check that found it gone.
+const HOLD_DAYS = 35;
+function holdWindow(r) {
+  if (r.post !== "freed" || !r.at) return null;
+  const add = (iso) => new Date(new Date(iso).getTime() + HOLD_DAYS * 864e5);
+  return [add(r.at), add(r.freedSince || r.postAt)];
+}
+const shortDate = (d) => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+function holdText(r) {
+  const w = holdWindow(r);
+  if (!w) return "";
+  const [a, b] = w.map(shortDate);
+  return a === b ? a : `${a}–${b}`;
+}
 function postBadge(r) {
   const p = POST[r.post];
-  return p ? ` <span class="postb ${p[0]}" title="${p[2]}">${p[1]}</span>` : "";
+  if (!p) return "";
+  const hold = holdText(r);
+  const tip = hold ? `${p[2]}. If it's a rename hold, it should end around ${hold}: try the name again then (the owner can still take it back before that).` : p[2];
+  return ` <span class="postb ${p[0]}" title="${esc(tip)}">${p[1]}</span>${hold ? ` <span class="hold" title="${esc(tip)}">try ~${hold}</span>` : ""}`;
 }
 
 function rowHtml(r, q) {
@@ -345,6 +363,7 @@ document.addEventListener("click", (e) => {
   if (r.src) extra.push(`From list: ${esc(r.src)}`);
   if (r.at) extra.push(`Checked: ${new Date(r.at).toLocaleString()}`);
   if (r.post) extra.push(`After release (${new Date(r.postAt).toLocaleString()}): ${esc(POST[r.post]?.[2] || "no change on the hiscores")}`);
+  if (holdText(r)) extra.push(`Estimated hold end: ${holdText(r)} (35 days after the rename, which happened between ${new Date(r.at).toLocaleDateString()} and ${new Date(r.freedSince || r.postAt).toLocaleDateString()})`);
   d.innerHTML = `<td colspan="9" class="why"><ul>${r.why.map((w) => `<li>${esc(w)}</li>`).join("")}</ul>${extra.join(" · ")}</td>`;
   tr.after(d);
 });
