@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#15130f">
+<title>OSRS Name Release Predictor</title>
+<link rel="stylesheet" href="style.css?v=16">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Name Release Predictor</h1>
+    <p class="sub">Which names are most likely to be freed in the November 2026 name release.
+      Release order follows the announced schedule: <b>A on Thu Nov 5</b>, then one batch each weekday at <b>06:00 EST</b> until the last digits on Mon Nov 30.</p>
+    <div class="stats" id="stats"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <nav class="tabs">
+    <button data-view="all" class="on">All names</button>
+    <button data-view="shortlist">My shortlist <span id="slCount" class="tabcount"></span></button>
+  </nav>
+
+  <section id="shortlistView" hidden>
+    <div class="sl-toolbar">
+      <label>Names per batch
+        <select id="slPer"><option>10</option><option selected>25</option><option>50</option></select>
+      </label>
+      <details class="multi" id="slBatch"><summary>Batch: <span class="multi-sum">All</span></summary><div class="multi-menu"></div></details>
+      <details class="multi" id="slType"><summary>Type: <span class="multi-sum">All</span></summary><div class="multi-menu"></div></details>
+      <div class="chips" id="slValues" title="Value tiers to include">
+        <label class="chip v-extreme"><input type="checkbox" value="extreme"> Extreme</label>
+        <label class="chip v-high"><input type="checkbox" value="high"> High</label>
+        <label class="chip v-medium"><input type="checkbox" value="medium"> Medium</label>
+        <label class="chip v-low"><input type="checkbox" value="low"> Low</label>
+      </div>
+      <label><input type="checkbox" id="slPinnedOnly"> Pinned only</label>
+      <label title="Hides names you marked taken and names detected as claimed after release"><input type="checkbox" id="slHideDone"> Hide taken</label>
+      <span class="spacer"></span>
+      <button id="slRestore" class="ghost">Restore dismissed</button>
+      <button id="slClear" class="ghost">Clear statuses</button>
+      <button id="slPrint">Print / save PDF</button>
+    </div>
+    <p class="muted sl-help">The top picks for each batch by value × likelihood, plus any names you've pinned (★ in the All names view).
+      Copy a name, paste it into the in-game or website name checker, then mark the result. Your shortlist is saved in this browser.</p>
+    <div id="shortlist"></div>
+  </section>
+
+  <div id="allView">
+  <section class="controls">
+    <div class="searchbar">
+      <input id="q" type="search" placeholder="Search names…  e.g. dragon · ^ar (starts with) · er$ (ends with) · ^axe$ (exact)">
+      <button id="filtersBtn" class="filters-btn" aria-expanded="false">Filters</button>
+    </div>
+    <div class="row filters">
+      <div class="chips" id="tiers">
+        <label class="chip likely"><input type="checkbox" value="likely" checked> Likely</label>
+        <label class="chip possible"><input type="checkbox" value="possible" checked> Possible</label>
+      </div>
+      <div class="chips" id="values" title="Name value">
+        <label class="chip v-extreme"><input type="checkbox" value="extreme" checked> Extreme</label>
+        <label class="chip v-high"><input type="checkbox" value="high" checked> High</label>
+        <label class="chip v-medium"><input type="checkbox" value="medium" checked> Medium</label>
+        <label class="chip v-low"><input type="checkbox" value="low" checked> Low</label>
+      </div>
+      <label>Added
+        <select id="added">
+          <option value="">Any time</option>
+          <option value="unseen">New since I last looked</option>
+          <option value="24h">Last 24 hours</option>
+          <option value="7d">Last 7 days</option>
+        </select>
+      </label>
+      <label>After release
+        <select id="post" title="Names in released batches are re-checked against the hiscores">
+          <option value="">Show all</option>
+          <option value="hide">Hide taken</option>
+          <option value="claimed">Taken only</option>
+          <option value="freed">Freed only</option>
+        </select>
+      </label>
+      <label title="Batches that have already opened (currently A)"><input type="checkbox" id="showReleased"> Show released batches</label>
+      <button id="markSeen" class="seenbtn" title="Mark every current name as seen, so only names added after now count as new">Mark all seen</button>
+      <details class="multi" id="type"><summary>Type: <span class="multi-sum">All</span></summary><div class="multi-menu"></div></details>
+      <details class="multi" id="batch"><summary>Batch: <span class="multi-sum">All</span></summary><div class="multi-menu"></div></details>
+      <label>Max length
+        <select id="maxlen">
+          <option value="12">Any</option><option value="1">1</option><option value="2">2</option>
+          <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+          <option value="6">6</option><option value="8">8</option>
+        </select>
+      </label>
+      <label>Sort
+        <select id="sort">
+          <option value="release">Release order</option>
+          <option value="best">Best bets (value × likelihood)</option>
+          <option value="score">Most likely first</option>
+          <option value="value">Highest quality first</option>
+          <option value="short">Shortest first</option>
+          <option value="newest">Newest added first</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="live" id="live">
+    <form id="checkForm">
+      <span>Check any name live:</span>
+      <input id="checkName" maxlength="12" placeholder="name" required>
+      <button>Check</button>
+      <span id="checkMsg" class="muted"></span>
+    </form>
+    <div id="checkResult"></div>
+  </section>
+
+  <div id="results"></div>
+  <button id="more" class="more" hidden>Show more</button>
+  </div>
+
+  <details class="method">
+    <summary>How the score works</summary>
+    <p>Jagex frees a name if the account has been <b>inactive for 2+ years</b> and was <b>permanently banned</b>,
+      <b>never a member</b>, or had <b>bond-only membership that ended 5+ years ago</b>. None of that is public, so this tool combines public signals:</p>
+    <ul>
+      <li><b>Active, won't release:</b> Sailing XP (skill launched Nov 2025), RuneMetrics activity in the last 2 years, or Wise Old Man shows XP gains in the last 2 years.</li>
+      <li><b>Ghost with no RuneMetrics profile, likely (85):</b> not on either hiscore and no RS3 profile. In batch A, about 25% of these were claimed within a day.</li>
+      <li><b>Ghost, not yet checked on RuneMetrics, possible (62):</b> about half turn out to have no profile.</li>
+      <li><b>Ghost with a RuneMetrics profile, unlikely:</b> only about 1% were claimed in batch A.</li>
+      <li><b>Ranked free-to-play, unlikely:</b> none of the 129 in batch A were released.</li>
+      <li><b>Ex-member, unlikely:</b> about 0.3% were claimed in batch A.</li>
+      <li><b>Banned (Wise Old Man), unlikely:</b> none of the 16 in batch A were claimed.</li>
+    </ul>
+    <p><b>Value</b> rates how desirable a name is (quality 0–100), separately from whether it will release.
+      1–2 character names score highest, and every 3-letter name rates at least <b>high</b>. Words score higher when they're
+      short, well known and evocative (hand-picked cool words, OSRS terms). They score lower for filler words (the, which),
+      web or tech jargon and abbreviations (html, login), hard-to-pronounce strings, and dull word forms
+      (-tion, -ment, -ing, -ed, plurals). Tiers: <b>extreme</b> 78+, <b>high</b> 62+, <b>medium</b> 45+, <b>low</b> below 45.</p>
+    <p class="muted">These are estimates from public data. Jagex hasn't said which names are in each batch.</p>
+  </details>
+</main>
+<script src="app.js?v=16"></script>
+</body>
+</html>
